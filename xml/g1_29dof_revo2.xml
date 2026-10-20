@@ -138,7 +138,8 @@
 
   <worldbody>
     <body name="pelvis" pos="0 0 0.793">
-      <site name="imu" size="0.01" pos="0.0 0.0 0.0" />
+      <!-- Main IMU (rt/lowstate), imu_in_pelvis in the Unitree URDF -->
+      <site name="imu" size="0.01" pos="0.04525 0 -0.08339" />
       <inertial pos="0 0 -0.07605" quat="1 0 -0.000399148 0" mass="3.813"
         diaginertia="0.010549 0.0093089 0.0079184" />
       <joint name="floating_base_joint" type="free" limited="false" actuatorfrclimited="false" />
@@ -282,8 +283,9 @@
             actuatorfrcrange="-50 50" class="torso_motor"/>
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1"
             mesh="waist_roll_link" />
-          <site name="secondary_imu" size="0.01" pos="-0.03959 -0.00224 0.13792"/>
           <body name="torso_link" pos="0 0 0.019">
+            <!-- Secondary IMU (rt/secondary_imu), imu_in_torso in the Unitree URDF -->
+            <site name="secondary_imu" size="0.01" pos="-0.03959 -0.00224 0.13792"/>
             <inertial pos="0.00331658 0.000261533 0.179856"
               quat="0.999831 0.000376204 0.0179895 -0.00377704" mass="9.598"
               diaginertia="0.12407 0.111951 0.0325382" />
@@ -876,16 +878,19 @@
     <jointactuatorfrc name="right_ring_proximal_torque" joint="right_ring_proximal_joint" />
     <jointactuatorfrc name="right_pinky_proximal_torque" joint="right_pinky_proximal_joint" />
 
-    <framequat name="imu-torso-quat" objtype="site" objname="imu" />
-    <gyro name="imu-torso-angular-velocity" site="imu" noise="5e-4" cutoff="34.9"/>
-    <accelerometer name="imu-torso-linear-acceleration" site="imu" noise="1e-2" cutoff="157"/>
+    <!-- mc_mujoco feeds the mc_rtc body sensor X from the sensors X_gyro and X_accelerometer -->
+    <!-- Main IMU, pelvis: body sensor "Accelerometer" (mc_g1) -->
+    <framequat name="Accelerometer_quat" objtype="site" objname="imu" />
+    <gyro name="Accelerometer_gyro" site="imu" noise="5e-4" cutoff="34.9"/>
+    <accelerometer name="Accelerometer_accelerometer" site="imu" noise="1e-2" cutoff="157"/>
 
     <framepos name="frame_pos" objtype="site" objname="imu" />
     <framelinvel name="frame_vel" objtype="site" objname="imu" />
 
-    <framequat name="imu-pelvis-quat" objtype="site" objname="secondary_imu" />
-    <gyro name="imu-pelvis-angular-velocity" site="secondary_imu" noise="5e-4" cutoff="34.9"/>
-    <accelerometer name="imu-pelvis-linear-acceleration" site="secondary_imu" noise="1e-2" cutoff="157"/>
+    <!-- Secondary IMU, torso: body sensor "TorsoAccelerometer" (mc_g1) -->
+    <framequat name="TorsoAccelerometer_quat" objtype="site" objname="secondary_imu" />
+    <gyro name="TorsoAccelerometer_gyro" site="secondary_imu" noise="5e-4" cutoff="34.9"/>
+    <accelerometer name="TorsoAccelerometer_accelerometer" site="secondary_imu" noise="1e-2" cutoff="157"/>
 
   </sensor>
 
