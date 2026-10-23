@@ -150,9 +150,9 @@
           <inertial pos="0 2.3e-05 0" quat="0.5 -0.5 -0.5 -0.5" mass="0.086" diaginertia="8.245e-06 7.079e-06 6.339e-06" />
           <joint name="waist_roll_joint" pos="0 0 0" axis="1 0 0" range="-0.52 0.52" actuatorfrcrange="-100 100" class="torso_motor" />
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="waist_roll_link" />
-          <!-- Secondary IMU (rt/secondary_imu), imu_in_torso in the Unitree URDF -->
           <body name="torso_link" pos="0 0 0">
             <site name="secondary_imu" size="0.01" pos="-0.03959 -0.00224 0.14792" />
+            <!-- Secondary IMU (rt/secondary_imu), imu_in_torso in the Unitree URDF -->
             <inertial pos="0.00203133446 0.000339726749 0.184597145" quat="0.0198392666 0.00131970358 -0.99980231 5.9896316e-05" mass="7.817" diaginertia="0.1217952 0.109772504 0.0273733201" />
             <joint name="waist_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.52 0.52" actuatorfrcrange="-100 100" class="torso_motor" />
             <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="torso_link" />
@@ -197,6 +197,7 @@
                           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_wrist_yaw_link" />
                           <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_wrist_yaw_link" />
                           <geom pos="0.0415 0.003 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="left_rubber_hand" />
+                          <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="left_rubber_hand" pos="0.0415 0.003 0" />
                         </body>
                       </body>
                     </body>
@@ -240,6 +241,7 @@
                           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_wrist_yaw_link" />
                           <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_wrist_yaw_link" />
                           <geom pos="0.0415 -0.003 0" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.7 0.7 0.7 1" mesh="right_rubber_hand" />
+                          <geom type="mesh" rgba="0.7 0.7 0.7 1" mesh="right_rubber_hand" pos="0.0415 -0.003 0" />
                         </body>
                       </body>
                     </body>

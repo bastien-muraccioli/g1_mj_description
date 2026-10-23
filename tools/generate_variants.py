@@ -6,7 +6,8 @@ The model of a variant is obtained from a template model of the same family (23d
 29dof_revo2) in which every quantity that depends on the hardware revision is recomputed from the URDF:
   - body positions/orientations (joint origins)
   - inertial of each body, including the fixed links merged into it (same as MuJoCo fusestatic)
-  - meshes (mesh files of the links, geoms of merged fixed links placed from the URDF, removed if the link is gone)
+  - meshes (mesh files of the links, geoms placed from the URDF visual/collision origins, removed if the link is gone,
+    collision meshes of the URDF added when the template has none for that link)
   - joint ranges, actuator force ranges, motor control ranges (URDF effort)
   - joints that are fixed in the URDF (locked waist): joint, actuator and sensors removed
   - IMU sites (imu_in_pelvis -> site "imu", imu_in_torso -> site "secondary_imu")
@@ -39,7 +40,7 @@ VARIANTS = {
 }
 SITE_LINKS = {"imu": "imu_in_pelvis", "secondary_imu": "imu_in_torso"}
 # Fixed links of the deprecated models that do not exist in every hardware revision
-OPTIONAL_LINKS = {"pelvis_contour_link", "waist_support_link", "waist_yaw_fixed_link"}
+OPTIONAL_LINKS = {"pelvis_contour_link", "waist_support_link", "waist_yaw_fixed_link", "waist_yaw_link"}
 
 
 # ----------------------------------------------------------------------------------------------- math helpers
@@ -82,6 +83,26 @@ def set_orientation(el, q):
         el.set("quat", fmt(q))
 
 
+def origin(el):
+    """URDF <origin> of an element -> (xyz, R)"""
+    o = el.find("origin") if el is not None else None
+    xyz = (o.get("xyz", "0 0 0") if o is not None else "0 0 0").split()
+    rpy = (o.get("rpy", "0 0 0") if o is not None else "0 0 0").split()
+    return np.array([float(x) for x in xyz]), rpy_to_mat([float(x) for x in rpy])
+
+
+def is_visual(g):
+    return g.get("contype") == "0" and g.get("conaffinity") == "0"
+
+
+def place_geom(g, p, R):
+    if np.allclose(p, 0, atol=1e-12):
+        g.attrib.pop("pos", None)
+    else:
+        g.set("pos", fmt(p))
+    set_orientation(g, mat_to_quat(R))
+
+
 def fmt(v):
     return " ".join(f"{x:.9g}" if abs(x) > 1e-12 else "0" for x in v)
 
@@ -94,7 +115,11 @@ class Urdf:
         for l in root.findall("link"):
             inertial = l.find("inertial")
             mesh = l.find("visual/geometry/mesh")
-            info = {"mesh": os.path.basename(mesh.get("filename")) if mesh is not None else None, "mass": 0.0}
+            info = {"mesh": os.path.basename(mesh.get("filename")) if mesh is not None else None, "mass": 0.0,
+                    "visual": origin(l.find("visual")),
+                    "collision": [origin(c) for c in l.findall("collision") if c.find("geometry/mesh") is not None
+                                  and os.path.basename(c.find("geometry/mesh").get("filename")) == (
+                                      os.path.basename(mesh.get("filename")) if mesh is not None else None)]}
             if inertial is not None:
                 o = inertial.find("origin")
                 I = inertial.find("inertia")
@@ -225,21 +250,37 @@ def generate(template_path, urdf, model_name, out_path):
             inertial.set("quat", fmt(q))
             inertial.set("mass", f"{m:.9g}")
             inertial.set("diaginertia", fmt(d))
-        # geoms of merged links
+        # mesh geoms of the body link and of the merged links, placed from the URDF visual / collision origins
+        link_pose = {name: (np.zeros(3), np.eye(3)), **merged_pose}
         for g in list(body.findall("geom")):
             mesh = g.get("mesh")
-            if mesh is None or mesh == name:
+            if mesh is None:
                 continue
             if mesh in removed_links:
                 body.remove(g)
                 continue
-            if mesh in merged_pose:
-                p, R = merged_pose[mesh]
-                if np.allclose(p, 0, atol=1e-12):
-                    g.attrib.pop("pos", None)
-                else:
-                    g.set("pos", fmt(p))
-                set_orientation(g, mat_to_quat(R))
+            if mesh not in link_pose:
+                continue
+            p, R = link_pose[mesh]
+            L = urdf.links[mesh]
+            if is_visual(g) or not L["collision"]:
+                vp, vR = L["visual"]
+            else:
+                vp, vR = L["collision"][0]
+            place_geom(g, p + R @ vp, R @ vR)
+        # collision meshes of the URDF that the template does not have (e.g. rubber hands)
+        for link, (p, R) in link_pose.items():
+            L = urdf.links[link]
+            if not L["collision"] or not L["mesh"]:
+                continue
+            geoms = [g for g in body.findall("geom") if g.get("mesh") == link]
+            vis = next((g for g in geoms if is_visual(g)), None)
+            if vis is None or any(not is_visual(g) for g in geoms):
+                continue
+            col = ET.Element("geom", {"type": "mesh", "rgba": vis.get("rgba", "0.7 0.7 0.7 1"), "mesh": link})
+            cp, cR = L["collision"][0]
+            place_geom(col, p + R @ cp, R @ cR)
+            body.insert(list(body).index(vis) + 1, col)
     # IMU sites, placed in the body the IMU link is merged into
     for site_name, link in SITE_LINKS.items():
         site = next((s for s in worldbody.iter("site") if s.get("name") == site_name), None)
